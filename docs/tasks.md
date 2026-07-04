@@ -44,13 +44,13 @@
 
 | ID | Task | Priority | Status | Notes |
 |----|------|----------|--------|-------|
-| A1 | Set up project skeleton + `Main` entry point | P0 | 🔲 | Coordinate structure with Dev C |
-| A2 | Open a window / canvas surface | P0 | 🔲 | Pick lib (Swing/JavaFX/other) — decide with team |
-| A3 | Capture left-click, store as control point | P0 | 🔲 | Expose points to shared state (Dev C) |
-| A4 | Render each control point as a small circle | P0 | 🔲 | Audit: "small circle around the control points" |
-| A5 | Wire `Escape` → close window cleanly | P0 | 🔲 | No errors on exit |
-| A6 | Wire `Enter` → fire "start animation" event | P0 | 🔲 | Handoff to Dev B's engine |
-| A7 | Redraw loop / repaint on state change | P0 | 🔲 | Shared with Dev B animation |
+| A1 | Set up project skeleton + `Main` entry point | P0 | ✅ | `src/`, Swing chosen; `javac *.java && java Main` |
+| A2 | Open a window / canvas surface | P0 | ✅ | `CanvasPanel` (JPanel), 900×640 |
+| A3 | Capture left-click, store as control point | P0 | ✅ | Writes to `AppState.controlPoints()` |
+| A4 | Render each control point as a small circle | P0 | ✅ | Filled dot + blue ring around each point |
+| A5 | Wire `Escape` → close window cleanly | P0 | ✅ | Key binding disposes window; JVM exits clean |
+| A6 | Wire `Enter` → fire "start animation" event | P0 | ✅ | Calls `AnimationController.start()` (stub until Dev B) |
+| A7 | Redraw loop / repaint on state change | P0 | ✅ | `repaint()` on each point; paint hook left for Dev B |
 
 ## Dev B — Algorithm & Animation
 
