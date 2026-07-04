@@ -21,7 +21,7 @@ public final class Main {
         CanvasPanel canvas = new CanvasPanel(state);
 
         // Dev C wires the real Chaikin animation controller here (task C3):
-        //   canvas.setController(new ChaikinAnimator(state, canvas));
+        canvas.setController(new ChaikinAnimationController(state, canvas));
         // Until then the no-op stub keeps the app runnable.
 
         JFrame frame = new JFrame("Jaikin — Chaikin's Algorithm");

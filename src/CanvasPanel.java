@@ -9,6 +9,7 @@ import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+import java.util.List;
 
 /**
  * Dev A — the drawing surface and input handler.
@@ -110,6 +111,25 @@ public final class CanvasPanel extends JPanel {
             // Draw the current Chaikin step's curve here, reading state.step().
             // Left intentionally empty in Dev A's layer.
             // ====================================================================
+            List<Point> curve = controller.getCurrentPoints();
+
+            if (curve.size() >= 2) {
+
+                g2.setColor(Color.GREEN);
+
+                for (int i = 0; i < curve.size() - 1; i++) {
+
+                    Point p1 = curve.get(i);
+                    Point p2 = curve.get(i + 1);
+
+                    g2.drawLine(
+                            (int) p1.x(),
+                            (int) p1.y(),
+                            (int) p2.x(),
+                            (int) p2.y()
+                    );
+                }
+            }
 
             drawControlPoints(g2);
 
