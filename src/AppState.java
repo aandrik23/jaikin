@@ -28,6 +28,10 @@ public final class AppState {
         controlPoints.add(new Point(x, y));
     }
 
+    public void moveControlPoint(int index, double x, double y) {
+        controlPoints.get(index).set(x, y);
+    }
+
     public void clear() {
         controlPoints.clear();
         mode = Mode.IDLE;

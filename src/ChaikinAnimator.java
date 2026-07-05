@@ -2,10 +2,12 @@ import java.util.List;
 
 public class ChaikinAnimator {
 
+    private final int maxStep;
     private List<List<Point>> steps;
     private int currentStep;
 
-    public ChaikinAnimator() {
+    public ChaikinAnimator(int maxStep) {
+        this.maxStep = maxStep;
         currentStep = 0;
     }
 
@@ -14,7 +16,7 @@ public class ChaikinAnimator {
      * Dev C: Call this method when the animation starts.
      */
     public void start(List<Point> controlPoints) {
-        steps = Chaikin.generateSteps(controlPoints, 7);
+        steps = Chaikin.generateSteps(controlPoints, maxStep);
         currentStep = 0;
     }
 
@@ -31,7 +33,7 @@ public class ChaikinAnimator {
 
     /**
      * Advances to the next animation frame.
-     * After step 7, the animation restarts from step 0.
+     * After the final step, the animation restarts from step 0.
      */
     public void nextStep() {
         if (steps == null || steps.isEmpty()) {
@@ -57,6 +59,20 @@ public class ChaikinAnimator {
      */
     public boolean isRunning() {
         return steps != null && !steps.isEmpty();
+    }
+
+    /**
+     * Recomputes all steps from updated control points while keeping
+     * the current step index (used during real-time drag).
+     */
+    public void regenerate(List<Point> controlPoints) {
+        if (steps == null) {
+            return;
+        }
+
+        int step = currentStep;
+        steps = Chaikin.generateSteps(controlPoints, maxStep);
+        currentStep = Math.min(step, steps.size() - 1);
     }
 
     /**

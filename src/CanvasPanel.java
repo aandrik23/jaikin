@@ -5,6 +5,7 @@ import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -35,6 +36,9 @@ public final class CanvasPanel extends JPanel {
     // Bonus reminder (task C5) — shown when Enter is pressed with no points.
     private boolean showReminder = false;
 
+    // Bonus drag (task C7)
+    private int dragIndex = -1;
+
     public CanvasPanel(AppState state) {
         this.state = state;
         setBackground(Color.BLACK);
@@ -54,14 +58,57 @@ public final class CanvasPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON1) {
+                if (e.getButton() != MouseEvent.BUTTON1) {
+                    return;
+                }
+
+                int hit = hitTest(e.getX(), e.getY());
+                if (hit >= 0) {
+                    dragIndex = hit;
+                } else {
                     state.addControlPoint(e.getX(), e.getY());
                     showReminder = false;
-                    repaint();               // A7
-                    requestFocusInWindow();  // keep key events flowing
+                    repaint();
+                }
+                requestFocusInWindow();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    dragIndex = -1;
                 }
             }
         });
+
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (dragIndex < 0) {
+                    return;
+                }
+
+                state.moveControlPoint(dragIndex, e.getX(), e.getY());
+                controller.onControlPointsChanged();
+                repaint();
+            }
+        });
+    }
+
+    private int hitTest(int x, int y) {
+        double hitRadius = RING_RADIUS + 4;
+        double hitRadiusSq = hitRadius * hitRadius;
+
+        for (int i = state.controlPoints().size() - 1; i >= 0; i--) {
+            Point p = state.controlPoints().get(i);
+            double dx = x - p.x();
+            double dy = y - p.y();
+            if (dx * dx + dy * dy <= hitRadiusSq) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     // ---- A5/A6: keyboard input via key bindings ----------------------------
@@ -72,6 +119,9 @@ public final class CanvasPanel extends JPanel {
         });
         bind("ESCAPE", "quit", new AbstractAction() {
             @Override public void actionPerformed(ActionEvent e) { onEscape(); }
+        });
+        bind("C", "clear", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { onClear(); }
         });
     }
 
@@ -96,6 +146,15 @@ public final class CanvasPanel extends JPanel {
         if (w != null) {
             w.dispose();
         }
+    }
+
+    private void onClear() {
+        // Bonus C6 — clear canvas without restarting the program.
+        controller.stop();
+        state.clear();
+        dragIndex = -1;
+        showReminder = false;
+        repaint();
     }
 
     // ---- A4/A7: rendering --------------------------------------------------

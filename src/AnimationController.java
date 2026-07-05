@@ -16,6 +16,9 @@ public interface AnimationController {
     // Dev B: current curve to render
     List<Point> getCurrentPoints();
 
+    /** Called when control points move (bonus drag). Default no-op. */
+    default void onControlPointsChanged() { }
+
     AnimationController NONE = new AnimationController() {
 
         @Override

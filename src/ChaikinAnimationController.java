@@ -12,11 +12,12 @@ public class ChaikinAnimationController implements AnimationController {
     private final ChaikinAnimator animator;
 
     private Timer timer;
+    private boolean twoPointLineActive;
 
     public ChaikinAnimationController(AppState state, CanvasPanel canvas) {
         this.state = state;
         this.canvas = canvas;
-        this.animator = new ChaikinAnimator();
+        this.animator = new ChaikinAnimator(MAX_STEP);
     }
 
     @Override
@@ -31,12 +32,14 @@ public class ChaikinAnimationController implements AnimationController {
         // Dev A draws them directly.
         // No animation should start.
         if (state.controlPoints().size() < 3) {
+            twoPointLineActive = state.controlPoints().size() == 2;
             state.setMode(AppState.Mode.IDLE);
             state.setStep(0);
             canvas.repaint();
             return;
         }
 
+        twoPointLineActive = false;
         animator.start(state.controlPoints());
 
         state.setMode(AppState.Mode.ANIMATING);
@@ -73,6 +76,7 @@ public class ChaikinAnimationController implements AnimationController {
         }
 
         animator.reset();
+        twoPointLineActive = false;
 
         state.setMode(AppState.Mode.IDLE);
         state.setStep(0);
@@ -83,14 +87,22 @@ public class ChaikinAnimationController implements AnimationController {
         canvas.repaint();
     }
 
-    /**
-     * Returns the points that should be rendered
-     * for the current animation frame.
-     *
-     * Dev C (or CanvasPanel) can call this method
-     * when drawing the Chaikin curve.
-     */
+    @Override
     public java.util.List<Point> getCurrentPoints() {
+        // Two control points after Enter: draw a straight line (no animation).
+        if (twoPointLineActive && state.controlPoints().size() == 2) {
+            return state.controlPoints();
+        }
+
         return animator.getCurrentPoints();
+    }
+
+    @Override
+    public void onControlPointsChanged() {
+        if (state.mode() == AppState.Mode.ANIMATING && animator.isRunning()) {
+            animator.regenerate(state.controlPoints());
+            state.setStep(animator.getCurrentStep());
+            canvas.repaint();
+        }
     }
 }
