@@ -5,8 +5,8 @@ public final class Chaikin {
 
     /**
      * Performs one Chaikin subdivision iteration.
-     * Dev C: This class is independent from the UI and application state.
-     * It should only be used as the algorithm engine.
+     * This class is independent from the UI and application state;
+     * it is purely the algorithm engine.
      */
     public static List<Point> refineOnce(List<Point> points) {
         List<Point> refined = new ArrayList<>();
@@ -45,7 +45,7 @@ public final class Chaikin {
 
     /**
      * Generates all Chaikin steps from step 0 to maxStep.
-     * Dev C: The animation controller can consume this list directly.
+     * The animation controller can consume this list directly.
      */
     public static List<List<Point>> generateSteps(List<Point> controlPoints, int maxStep) {
         List<List<Point>> steps = new ArrayList<>();

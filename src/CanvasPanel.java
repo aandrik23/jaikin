@@ -13,30 +13,38 @@ import javax.swing.KeyStroke;
 import java.util.List;
 
 /**
- * Dev A — the drawing surface and input handler.
+ * The drawing surface and input handler.
  *
- *  A2  Canvas surface (this JPanel).
- *  A3  Left-click places a control point into {@link AppState}.
- *  A4  Each control point is rendered as a small ringed circle.
- *  A6  Enter fires the "start animation" event via {@link AnimationController}.
- *  A7  Repaints on every state change.
+ *  - Canvas surface (this JPanel).
+ *  - Left-click places a control point into {@link AppState}.
+ *  - Each control point is rendered as a small filled dot.
+ *  - Enter fires the "start animation" event via {@link AnimationController}.
+ *  - Repaints on every state change.
  *
- * Rendering of the animated Chaikin curve itself is Dev B's job (task B7);
- * a hook is marked below where that drawing should slot in.
+ * The animated Chaikin curve is supplied by the {@link AnimationController}
+ * and drawn in {@link #paintComponent}.
  */
 @SuppressWarnings("serial")  // Swing component is never serialized in this app
 public final class CanvasPanel extends JPanel {
 
-    private static final int POINT_RADIUS = 4;   // filled dot
-    private static final int RING_RADIUS  = 8;    // circle "around" the point
+    private static final int POINT_RADIUS = 5;   // filled dot
+    private static final int DRAG_PICK_RADIUS = 10;  // click tolerance for picking a point to drag
+
+    private static final String HINT_TEXT =
+            "Left click: add/drag  -  C: clear  -  Enter: animate  -  Esc: quit";
+    private static final String EMPTY_ENTER_MESSAGE =
+            "Add at least one point before starting.";
+    private static final int MESSAGE_DURATION_MS = 2000;
 
     private final AppState state;
     private AnimationController controller = AnimationController.NONE;
 
-    // Bonus reminder (task C5) — shown when Enter is pressed with no points.
+    // Reminder — shown for a few seconds when Enter is pressed
+    // with no points, then fades out after a short delay.
     private boolean showReminder = false;
+    private javax.swing.Timer reminderTimer;
 
-    // Bonus drag (task C7)
+    // Index of the control point currently being dragged, or -1 if none.
     private int dragIndex = -1;
 
     public CanvasPanel(AppState state) {
@@ -47,12 +55,12 @@ public final class CanvasPanel extends JPanel {
         installKeys();
     }
 
-    /** Dev C injects the real controller here (task C3). */
+    /** Injects the animation controller that drives the Chaikin curve. */
     public void setController(AnimationController controller) {
         this.controller = (controller == null) ? AnimationController.NONE : controller;
     }
 
-    // ---- A3: mouse input ---------------------------------------------------
+    // ---- mouse input -------------------------------------------------------
 
     private void installMouse() {
         addMouseListener(new MouseAdapter() {
@@ -67,7 +75,10 @@ public final class CanvasPanel extends JPanel {
                     dragIndex = hit;
                 } else {
                     state.addControlPoint(e.getX(), e.getY());
-                    showReminder = false;
+                    clearReminder();
+                    // Fold the new point into a running animation (no second
+                    // Enter needed); no-op when not animating.
+                    controller.onControlPointsChanged();
                     repaint();
                 }
                 requestFocusInWindow();
@@ -96,8 +107,7 @@ public final class CanvasPanel extends JPanel {
     }
 
     private int hitTest(int x, int y) {
-        double hitRadius = RING_RADIUS + 4;
-        double hitRadiusSq = hitRadius * hitRadius;
+        double hitRadiusSq = (double) DRAG_PICK_RADIUS * DRAG_PICK_RADIUS;
 
         for (int i = state.controlPoints().size() - 1; i >= 0; i--) {
             Point p = state.controlPoints().get(i);
@@ -111,7 +121,7 @@ public final class CanvasPanel extends JPanel {
         return -1;
     }
 
-    // ---- A5/A6: keyboard input via key bindings ----------------------------
+    // ---- keyboard input via key bindings -----------------------------------
 
     private void installKeys() {
         bind("ENTER", "startAnimation", new AbstractAction() {
@@ -132,16 +142,37 @@ public final class CanvasPanel extends JPanel {
 
     private void onEnter() {
         if (!state.hasPoints()) {
-            // A6 empty case + bonus reminder (C5). No crash, drawing still allowed.
-            showReminder = true;
+            // No points: show the reminder. No crash, drawing still allowed.
+            startReminder();
             repaint();
             return;
         }
-        controller.start();  // handoff to Dev B's engine
+        controller.start();  // handoff to the animation engine
+    }
+
+    /** Show the reminder for MESSAGE_DURATION_MS, then auto-hide. */
+    private void startReminder() {
+        showReminder = true;
+        if (reminderTimer != null) {
+            reminderTimer.stop();
+        }
+        reminderTimer = new javax.swing.Timer(MESSAGE_DURATION_MS, e -> clearReminder());
+        reminderTimer.setRepeats(false);
+        reminderTimer.start();
+    }
+
+    private void clearReminder() {
+        if (reminderTimer != null) {
+            reminderTimer.stop();
+        }
+        if (showReminder) {
+            showReminder = false;
+            repaint();
+        }
     }
 
     private void onEscape() {
-        // A5 — close the window cleanly. Dispose so the JVM exits without errors.
+        // Close the window cleanly. Dispose so the JVM exits without errors.
         java.awt.Window w = javax.swing.SwingUtilities.getWindowAncestor(this);
         if (w != null) {
             w.dispose();
@@ -149,15 +180,15 @@ public final class CanvasPanel extends JPanel {
     }
 
     private void onClear() {
-        // Bonus C6 — clear canvas without restarting the program.
+        // Clear canvas without restarting the program.
         controller.stop();
         state.clear();
         dragIndex = -1;
-        showReminder = false;
+        clearReminder();
         repaint();
     }
 
-    // ---- A4/A7: rendering --------------------------------------------------
+    // ---- rendering ---------------------------------------------------------
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -166,15 +197,13 @@ public final class CanvasPanel extends JPanel {
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // === Dev B hook (task B7) ===========================================
-            // Draw the current Chaikin step's curve here, reading state.step().
-            // Left intentionally empty in Dev A's layer.
-            // ====================================================================
+            // Draw the current Chaikin step's curve, supplied by the controller.
             List<Point> curve = controller.getCurrentPoints();
 
             if (curve.size() >= 2) {
 
-                g2.setColor(Color.GREEN);
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new java.awt.BasicStroke(2f));
 
                 for (int i = 0; i < curve.size() - 1; i++) {
 
@@ -191,32 +220,44 @@ public final class CanvasPanel extends JPanel {
             }
 
             drawControlPoints(g2);
-
-            if (showReminder) {
-                drawReminder(g2);
-            }
+            drawHud(g2);
         } finally {
             g2.dispose();
         }
     }
 
     private void drawControlPoints(Graphics2D g2) {
+        g2.setColor(Color.BLUE);
         for (Point p : state.controlPoints()) {
             int x = (int) Math.round(p.x());
             int y = (int) Math.round(p.y());
 
-            // filled dot
-            g2.setColor(Color.WHITE);
+            // filled dot — no surrounding ring
             g2.fillOval(x - POINT_RADIUS, y - POINT_RADIUS, POINT_RADIUS * 2, POINT_RADIUS * 2);
-
-            // ring "around" the point (audit: small circle around each point)
-            g2.setColor(Color.WHITE);
-            g2.drawOval(x - RING_RADIUS, y - RING_RADIUS, RING_RADIUS * 2, RING_RADIUS * 2);
         }
     }
 
-    private void drawReminder(Graphics2D g2) {
+    /** On-screen HUD: control hint, optional reminder, and step counter. */
+    private void drawHud(Graphics2D g2) {
+        // Control hint, top-left.
+        g2.setFont(g2.getFont().deriveFont(java.awt.Font.PLAIN, 18f));
+        g2.setColor(Color.LIGHT_GRAY);
+        g2.drawString(HINT_TEXT, 10, 22);
+
+        // Empty-Enter reminder, below the hint.
+        if (showReminder) {
+            g2.setFont(g2.getFont().deriveFont(java.awt.Font.PLAIN, 24f));
+            g2.setColor(Color.RED);
+            g2.drawString(EMPTY_ENTER_MESSAGE, 10, 50);
+        }
+
+        // Step counter, bottom-right.
+        g2.setFont(g2.getFont().deriveFont(java.awt.Font.PLAIN, 24f));
         g2.setColor(Color.WHITE);
-        g2.drawString("Draw at least one point (left-click), then press Enter.", 12, 20);
+        String stepText = state.step() == 0
+                ? "Input"
+                : "Step: " + state.step() + "/" + AppState.MAX_STEP;
+        int textWidth = g2.getFontMetrics().stringWidth(stepText);
+        g2.drawString(stepText, getWidth() - textWidth - 20, getHeight() - 20);
     }
 }

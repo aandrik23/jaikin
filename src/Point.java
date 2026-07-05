@@ -1,6 +1,6 @@
 /**
  * A 2D point. Coordinates are doubles so that later subdivision steps
- * (Chaikin's algorithm, owned by Dev B) can produce fractional positions.
+ * (Chaikin's algorithm) can produce fractional positions.
  */
 public final class Point {
     private double x;

@@ -13,7 +13,7 @@ public class ChaikinAnimator {
 
     /**
      * Initializes the animation by generating all Chaikin steps.
-     * Dev C: Call this method when the animation starts.
+     * Call this method when the animation starts.
      */
     public void start(List<Point> controlPoints) {
         steps = Chaikin.generateSteps(controlPoints, maxStep);
@@ -77,7 +77,7 @@ public class ChaikinAnimator {
 
     /**
      * Stops the animation.
-     * Dev C: Can be called when resetting the application state.
+     * Can be called when resetting the application state.
      */
     public void reset() {
         steps = null;

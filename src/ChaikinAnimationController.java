@@ -4,15 +4,14 @@ import javax.swing.Timer;
 
 public class ChaikinAnimationController implements AnimationController {
 
-    private static final int MAX_STEP = 7;
-    private static final int FRAME_DELAY = 500;
+    private static final int MAX_STEP = AppState.MAX_STEP;
+    private static final int FRAME_DELAY = 600;   // ms per step
 
     private final AppState state;
     private final CanvasPanel canvas;
     private final ChaikinAnimator animator;
 
     private Timer timer;
-    private boolean twoPointLineActive;
 
     public ChaikinAnimationController(AppState state, CanvasPanel canvas) {
         this.state = state;
@@ -28,22 +27,24 @@ public class ChaikinAnimationController implements AnimationController {
             return;
         }
 
-        // One or two control points:
-        // Dev A draws them directly.
-        // No animation should start.
-        if (state.controlPoints().size() < 3) {
-            twoPointLineActive = state.controlPoints().size() == 2;
-            state.setMode(AppState.Mode.IDLE);
-            state.setStep(0);
-            canvas.repaint();
+        // A single control point: just show the point, no animation.
+        if (state.controlPoints().size() < 2) {
+            stop();
             return;
         }
 
-        twoPointLineActive = false;
+        // Two or more points enter the running state. With exactly two points
+        // the curve stays a straight line (step advance is gated below on
+        // having 3+ points), so adding a third point later starts animating
+        // on its own without pressing Enter again.
         animator.start(state.controlPoints());
 
         state.setMode(AppState.Mode.ANIMATING);
         state.setStep(0);
+
+        // Show step 0 (the straight polyline through the control points)
+        // immediately, before the timer advances to the first refinement.
+        canvas.repaint();
 
         if (timer != null) {
             timer.stop();
@@ -53,13 +54,15 @@ public class ChaikinAnimationController implements AnimationController {
             @Override
             public void actionPerformed(ActionEvent e) {
 
+                // Fewer than 3 points: hold on step 0 (a straight line),
+                // matching the Rust engine's early return.
+                if (state.controlPoints().size() < 3) {
+                    return;
+                }
+
                 animator.nextStep();
 
                 state.setStep(animator.getCurrentStep());
-
-                // Dev C:
-                // The application state can be synchronized here if more
-                // shared animation data is introduced later.
 
                 canvas.repaint();
             }
@@ -76,24 +79,15 @@ public class ChaikinAnimationController implements AnimationController {
         }
 
         animator.reset();
-        twoPointLineActive = false;
 
         state.setMode(AppState.Mode.IDLE);
         state.setStep(0);
-
-        // Dev C:
-        // Reset any additional shared application state here.
 
         canvas.repaint();
     }
 
     @Override
     public java.util.List<Point> getCurrentPoints() {
-        // Two control points after Enter: draw a straight line (no animation).
-        if (twoPointLineActive && state.controlPoints().size() == 2) {
-            return state.controlPoints();
-        }
-
         return animator.getCurrentPoints();
     }
 

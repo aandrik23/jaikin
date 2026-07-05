@@ -2,22 +2,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shared application state — the contract between input (Dev A),
- * the Chaikin engine / animation (Dev B), and the app shell (Dev C).
+ * Shared application state — the contract between input handling,
+ * the Chaikin engine / animation, and the app shell.
  *
- * NOTE (Dev C): this is a minimal holder created so Dev A's canvas/input
- * layer is runnable. Expand this into the full IDLE <-> ANIMATING state
- * machine (tasks C1/C2) and let the animation loop read `step` from here.
+ * Holds the control points, the high-level mode (IDLE <-> ANIMATING),
+ * and the current Chaikin step being displayed.
  */
 public final class AppState {
 
-    /** High-level app mode. Dev C owns transitions between these. */
+    /** Highest Chaikin step shown before the animation loops back to the input. */
+    public static final int MAX_STEP = 7;
+
+    /** High-level app mode. */
     public enum Mode { IDLE, ANIMATING }
 
     private final List<Point> controlPoints = new ArrayList<>();
     private Mode mode = Mode.IDLE;
 
-    /** Current Chaikin step being displayed (0..7). Written by Dev B's loop. */
+    /** Current Chaikin step being displayed (0..7). Written by the animation loop. */
     private int step = 0;
 
     public List<Point> controlPoints() {
